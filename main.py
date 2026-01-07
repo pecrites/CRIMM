@@ -1,7 +1,7 @@
 import time
 import signal
-import sys
 from datetime import datetime
+import random
 
 # ===== IMPORTS DU PROJET =====
 from core.decision_engine import DecisionEngine
@@ -10,7 +10,7 @@ from core.mode_controller import ModeController
 from modes.autopilot_mode import AutopilotMode
 from modes.safety_assist_mode import SafetyAssistMode
 from modes.advisory_mode import AdvisoryMode
-from modes.autopark_mode import AutoParkMode   # ✅ NOM CORRECT
+from modes.autopark_mode import AutoParkMode
 
 from vehicle.simulated_vehicle import SimulatedVehicle
 from perception.traffic_analyzer import TrafficAnalyzer
@@ -46,23 +46,17 @@ def main():
     # ==================================================
     print("🔧 Initialisation des modules…")
 
-    # Véhicule & perception
     vehicle = SimulatedVehicle()
     traffic = TrafficAnalyzer()
-
-    # Sécurité humaine
     safety = HumanOverride()
 
-    # Moteur de décision IA
     decision_engine = DecisionEngine(human_override=safety)
 
-    # ===== MODES =====
     autopilot = AutopilotMode(vehicle)
     safety_mode = SafetyAssistMode(vehicle)
     advisory = AdvisoryMode()
-    autopark = AutoParkMode(vehicle)   # ✅ NOM CORRECT
+    autopark = AutoParkMode(vehicle)
 
-    # ===== CONTRÔLEUR DE MODES =====
     mode_controller = ModeController(
         autopilot=autopilot,
         safety=safety_mode,
@@ -86,24 +80,27 @@ def main():
         print("-" * 45)
         print(f"🔁 Cycle #{cycle}")
 
-        # Perception
-        traffic_state = traffic.analyze()
-        print(f"👁️  Trafic détecté : {traffic_state}")
+        # 🔹 SIMULATION DU NIVEAU DE TRAFIC (0 à 100)
+        traffic_level = random.randint(0, 100)
 
-        # Décision IA
+        # 🔹 PERCEPTION
+        traffic_state = traffic.analyze(traffic_level)
+        print(f"👁️  Trafic (niveau {traffic_level}) : {traffic_state}")
+
+        # 🔹 DÉCISION IA
         decision = decision_engine.decide(traffic_state)
         print(f"🧠 Décision IA : {decision}")
 
-        # Mode actif
+        # 🔹 MODE ACTIF
         active_mode = mode_controller.get_current_mode(decision)
         print(f"🎛️  Mode actif : {active_mode}")
 
-        # Exécution du mode
+        # 🔹 EXÉCUTION DU MODE
         active_mode.execute(decision)
 
         print(f"🚘 Vitesse actuelle : {vehicle.speed} km/h")
 
-        # Sécurité humaine
+        # 🔹 SÉCURITÉ HUMAINE
         if safety.check_override():
             print("⚠️ Intervention humaine détectée — priorité chauffeur")
             break
