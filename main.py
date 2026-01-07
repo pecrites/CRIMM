@@ -3,9 +3,15 @@ import signal
 import sys
 from datetime import datetime
 
-# === IMPORTS DU PROJET ===
+# ===== IMPORTS DU PROJET =====
 from core.decision_engine import DecisionEngine
 from core.mode_controller import ModeController
+
+from modes.autopilot_mode import AutopilotMode
+from modes.safety_assist_mode import SafetyAssistMode
+from modes.advisory_mode import AdvisoryMode
+from modes.autopark_mode import AutoparkMode
+
 from vehicle.simulated_vehicle import SimulatedVehicle
 from perception.traffic_analyzer import TrafficAnalyzer
 from safety.human_override import HumanOverride
@@ -19,7 +25,7 @@ running = True
 def handle_exit(signum, frame):
     global running
     print("\n🛑 Interruption clavier détectée (Ctrl + C)")
-    print("🧠 CRIMM va s’arrêter proprement après ce cycle…")
+    print("🧠 CRIMM va s’arrêter proprement…")
     running = False
 
 signal.signal(signal.SIGINT, handle_exit)
@@ -29,25 +35,41 @@ signal.signal(signal.SIGINT, handle_exit)
 # PROGRAMME PRINCIPAL
 # ======================================================
 def main():
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 65)
     print("🚗 CRIMM — COCKPIT ROUTIER INTELLIGENT MULTI-MODES")
     print("☁️  Environnement : Cloud (RunPod)")
     print(f"🕒 Démarrage : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 60 + "\n")
+    print("=" * 65 + "\n")
 
     # ==================================================
     # INITIALISATION DES MODULES
     # ==================================================
     print("🔧 Initialisation des modules…")
 
+    # Véhicule & perception
     vehicle = SimulatedVehicle()
     traffic = TrafficAnalyzer()
+
+    # Sécurité humaine
     safety = HumanOverride()
 
-    # 🔴 CORRECTION IMPORTANTE ICI
+    # Moteur de décision IA
     decision_engine = DecisionEngine(human_override=safety)
 
-    mode_controller = ModeController()
+    # ===== MODES =====
+    autopilot = AutopilotMode(vehicle)
+    safety_mode = SafetyAssistMode(vehicle)
+    advisory = AdvisoryMode()
+    autopark = AutoparkMode(vehicle)
+
+    # ===== CONTRÔLEUR DE MODES (CORRECTEMENT INJECTÉ) =====
+    mode_controller = ModeController(
+        autopilot=autopilot,
+        safety=safety_mode,
+        advisory=advisory,
+        engine=decision_engine,
+        autopark=autopark
+    )
 
     print("✅ Tous les modules sont prêts.\n")
 
@@ -73,11 +95,12 @@ def main():
         print(f"🧠 Décision IA : {decision}")
 
         # --- MODE ACTIF ---
-        mode = mode_controller.get_current_mode(decision)
-        print(f"🎛️  Mode actif : {mode}")
+        active_mode = mode_controller.get_current_mode(decision)
+        print(f"🎛️  Mode actif : {active_mode}")
 
-        # --- ACTION VÉHICULE ---
-        vehicle.apply_decision(decision)
+        # --- APPLICATION DU MODE ---
+        active_mode.execute(decision)
+
         print(f"🚘 Vitesse actuelle : {vehicle.speed} km/h")
 
         # --- SÉCURITÉ HUMAINE ---
@@ -91,10 +114,10 @@ def main():
     # ==================================================
     # SORTIE PROPRE
     # ==================================================
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 65)
     print("🏁 SIMULATION CRIMM TERMINÉE")
     print("✅ Arrêt propre et contrôlé")
-    print("=" * 60)
+    print("=" * 65)
 
     input("\n🔚 Appuyez sur ENTRÉE pour fermer le programme...")
 
