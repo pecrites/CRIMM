@@ -32,6 +32,27 @@ signal.signal(signal.SIGINT, handle_exit)
 
 
 # ======================================================
+# ADAPTATEUR DE MOTEUR DE DÉCISION (ANTI-ERREUR)
+# ======================================================
+def get_decision(engine, traffic_state):
+    """
+    Appelle automatiquement la bonne méthode du DecisionEngine
+    quelle que soit son API interne.
+    """
+    if hasattr(engine, "decide"):
+        return engine.decide(traffic_state)
+    elif hasattr(engine, "make_decision"):
+        return engine.make_decision(traffic_state)
+    elif hasattr(engine, "evaluate"):
+        return engine.evaluate(traffic_state)
+    else:
+        raise AttributeError(
+            "❌ DecisionEngine ne possède aucune méthode de décision connue "
+            "(decide / make_decision / evaluate)"
+        )
+
+
+# ======================================================
 # PROGRAMME PRINCIPAL
 # ======================================================
 def main():
@@ -80,15 +101,15 @@ def main():
         print("-" * 45)
         print(f"🔁 Cycle #{cycle}")
 
-        # 🔹 SIMULATION DU NIVEAU DE TRAFIC (0 à 100)
+        # 🔹 SIMULATION DU NIVEAU DE TRAFIC
         traffic_level = random.randint(0, 100)
 
         # 🔹 PERCEPTION
         traffic_state = traffic.analyze(traffic_level)
         print(f"👁️  Trafic (niveau {traffic_level}) : {traffic_state}")
 
-        # 🔹 DÉCISION IA
-        decision = decision_engine.decide(traffic_state)
+        # 🔹 DÉCISION IA (ROBUSTE)
+        decision = get_decision(decision_engine, traffic_state)
         print(f"🧠 Décision IA : {decision}")
 
         # 🔹 MODE ACTIF
