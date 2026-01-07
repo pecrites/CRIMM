@@ -1,79 +1,97 @@
-from vehicle.simulated_vehicle import SimulatedVehicle
-from safety.human_override import HumanOverride
-from modes.autopilot_mode import AutopilotMode
-from modes.safety_assist_mode import SafetyAssistMode
-from modes.advisory_mode import AdvisoryMode
-from modes.autopark_mode import AutoParkMode
+import time
+import signal
+import sys
+from datetime import datetime
+
+# === IMPORTS DU PROJET ===
 from core.decision_engine import DecisionEngine
 from core.mode_controller import ModeController
-import time
+from vehicle.simulated_vehicle import SimulatedVehicle
+from perception.traffic_analyzer import TrafficAnalyzer
+from safety.human_override import HumanOverride
 
 
-print("\n[CRIMM] Initialisation du Cockpit Routier Intelligent...\n")
+# ======================================================
+# GESTION PROPRE DE L’ARRÊT (Ctrl + C)
+# ======================================================
+running = True
 
-vehicle = SimulatedVehicle()
-override = HumanOverride()
+def handle_exit(signum, frame):
+    global running
+    print("\n🛑 Interruption détectée (Ctrl + C)")
+    print("🧠 CRIMM se prépare à s’arrêter proprement...")
+    running = False
 
-autopilot = AutopilotMode(vehicle)
-safety = SafetyAssistMode(vehicle)
-advisory = AdvisoryMode()
-autopark = AutoParkMode(vehicle)
+signal.signal(signal.SIGINT, handle_exit)
 
-engine = DecisionEngine(override)
 
-controller = ModeController(
-    autopilot=autopilot,
-    safety=safety,
-    advisory=advisory,
-    engine=engine,
-    autopark=autopark
-)
+# ======================================================
+# PROGRAMME PRINCIPAL
+# ======================================================
+def main():
+    print("\n" + "=" * 55)
+    print("🚗 CRIMM — COCKPIT ROUTIER INTELLIGENT MULTI-MODES")
+    print("☁️  Environnement : Cloud (RunPod)")
+    print(f"🕒 Démarrage : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 55 + "\n")
 
-# ==============================
-# ACTIVATION DES MODES
-# ==============================
+    # Initialisation
+    print("🔧 Initialisation des modules...")
+    vehicle = SimulatedVehicle()
+    traffic = TrafficAnalyzer()
+    safety = HumanOverride()
+    decision_engine = DecisionEngine()
+    mode_controller = ModeController()
+    print("✅ Tous les modules sont prêts.\n")
 
-autopilot.activate()
-safety.activate()
+    print("▶️ Simulation ACTIVE")
+    print("ℹ️  Appuyez sur Ctrl + C pour arrêter proprement\n")
 
-# ==============================
-# SCÉNARIO 1 : CONDUITE + TRAFIC
-# ==============================
+    cycle = 0
 
-print("\n--- SCÉNARIO 1 : Trafic & Conseils ---")
+    # ==================================================
+    # BOUCLE PRINCIPALE (NE S’ARRÊTE PAS TOUTE SEULE)
+    # ==================================================
+    while running:
+        cycle += 1
+        print("-" * 40)
+        print(f"🔁 Cycle #{cycle}")
 
-traffic_scenarios = {
-    1: 0,  # fluide
-    2: 1,  # dense
-    3: 2,  # embouteillage
-    4: 0,  # retour fluide
-}
+        # Perception
+        traffic_state = traffic.analyze()
+        print(f"👁️  Trafic : {traffic_state}")
 
-for step in range(1, 5):
-    print(f"\n[TICK {step}]")
-    controller.update(
-        danger_level=0,
-        traffic_level=traffic_scenarios[step]
-    )
-    time.sleep(1)
+        # Décision IA
+        decision = decision_engine.decide(traffic_state)
+        print(f"🧠 Décision IA : {decision}")
 
-# ==============================
-# SCÉNARIO 2 : STATIONNEMENT
-# ==============================
+        # Mode actif
+        mode = mode_controller.get_current_mode(decision)
+        print(f"🎛️  Mode actif : {mode}")
 
-print("\n--- SCÉNARIO 2 : Stationnement ---")
-autopark.activate()
+        # Action véhicule
+        vehicle.apply_decision(decision)
+        print(f"🚘 Vitesse : {vehicle.speed} km/h")
 
-for _ in range(3):
-    controller.update(danger_level=0, traffic_level=0)
-    time.sleep(1)
+        # Sécurité humaine
+        if safety.check_override():
+            print("⚠️ Intervention humaine PRIORITAIRE")
+            break
 
-# ==============================
-# TEST OVERRIDE HUMAIN
-# ==============================
+        print("⏱️  Attente 2 secondes avant le prochain cycle...\n")
+        time.sleep(2)
 
-print("\n--- TEST OVERRIDE HUMAIN ---")
-override.activate()
-controller.update(danger_level=2, traffic_level=2)
+    # ==================================================
+    # SORTIE PROPRE
+    # ==================================================
+    print("\n" + "=" * 55)
+    print("🏁 SIMULATION CRIMM TERMINÉE")
+    print("✅ Arrêt propre et contrôlé")
+    print("=" * 55)
 
-print("\n[CRIMM] Fin de la simulation.\n")
+    input("\n🔚 Appuyez sur ENTRÉE pour fermer le programme...")
+
+
+# ======================================================
+if __name__ == "__main__":
+    main()
