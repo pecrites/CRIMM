@@ -10,7 +10,7 @@ from core.mode_controller import ModeController
 from modes.autopilot_mode import AutopilotMode
 from modes.safety_assist_mode import SafetyAssistMode
 from modes.advisory_mode import AdvisoryMode
-from modes.autopark_mode import AutoparkMode
+from modes.autopark_mode import AutoParkMode   # ✅ NOM CORRECT
 
 from vehicle.simulated_vehicle import SimulatedVehicle
 from perception.traffic_analyzer import TrafficAnalyzer
@@ -60,9 +60,9 @@ def main():
     autopilot = AutopilotMode(vehicle)
     safety_mode = SafetyAssistMode(vehicle)
     advisory = AdvisoryMode()
-    autopark = AutoparkMode(vehicle)
+    autopark = AutoParkMode(vehicle)   # ✅ NOM CORRECT
 
-    # ===== CONTRÔLEUR DE MODES (CORRECTEMENT INJECTÉ) =====
+    # ===== CONTRÔLEUR DE MODES =====
     mode_controller = ModeController(
         autopilot=autopilot,
         safety=safety_mode,
@@ -79,31 +79,31 @@ def main():
     cycle = 0
 
     # ==================================================
-    # BOUCLE PRINCIPALE (CONTINUE)
+    # BOUCLE PRINCIPALE
     # ==================================================
     while running:
         cycle += 1
         print("-" * 45)
         print(f"🔁 Cycle #{cycle}")
 
-        # --- PERCEPTION ---
+        # Perception
         traffic_state = traffic.analyze()
         print(f"👁️  Trafic détecté : {traffic_state}")
 
-        # --- DÉCISION IA ---
+        # Décision IA
         decision = decision_engine.decide(traffic_state)
         print(f"🧠 Décision IA : {decision}")
 
-        # --- MODE ACTIF ---
+        # Mode actif
         active_mode = mode_controller.get_current_mode(decision)
         print(f"🎛️  Mode actif : {active_mode}")
 
-        # --- APPLICATION DU MODE ---
+        # Exécution du mode
         active_mode.execute(decision)
 
         print(f"🚘 Vitesse actuelle : {vehicle.speed} km/h")
 
-        # --- SÉCURITÉ HUMAINE ---
+        # Sécurité humaine
         if safety.check_override():
             print("⚠️ Intervention humaine détectée — priorité chauffeur")
             break
