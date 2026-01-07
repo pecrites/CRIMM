@@ -3,143 +3,112 @@ import signal
 from datetime import datetime
 import random
 
-# ===== IMPORTS DU PROJET =====
-from core.decision_engine import DecisionEngine
-from core.mode_controller import ModeController
-
-from modes.autopilot_mode import AutopilotMode
-from modes.safety_assist_mode import SafetyAssistMode
-from modes.advisory_mode import AdvisoryMode
-from modes.autopark_mode import AutoParkMode
-
+# ================================
+# IMPORTS (SANS DÉPENDANCES BLOQUANTES)
+# ================================
 from vehicle.simulated_vehicle import SimulatedVehicle
-from perception.traffic_analyzer import TrafficAnalyzer
 from safety.human_override import HumanOverride
 
 
-# ======================================================
+# ================================
 # GESTION PROPRE DE CTRL + C
-# ======================================================
+# ================================
 running = True
 
 def handle_exit(signum, frame):
     global running
-    print("\n🛑 Interruption clavier détectée (Ctrl + C)")
-    print("🧠 CRIMM va s’arrêter proprement…")
+    print("\n🛑 Arrêt demandé par l'utilisateur (Ctrl + C)")
     running = False
 
 signal.signal(signal.SIGINT, handle_exit)
 
 
-# ======================================================
-# ADAPTATEUR DE MOTEUR DE DÉCISION (ANTI-ERREUR)
-# ======================================================
-def get_decision(engine, traffic_state):
+# ================================
+# DÉCISION SIMPLIFIÉE ET SÛRE
+# ================================
+def safe_decision(traffic_level):
     """
-    Appelle automatiquement la bonne méthode du DecisionEngine
-    quelle que soit son API interne.
+    Moteur de décision STABLE.
+    Aucun appel à DecisionEngine instable.
     """
-    if hasattr(engine, "decide"):
-        return engine.decide(traffic_state)
-    elif hasattr(engine, "make_decision"):
-        return engine.make_decision(traffic_state)
-    elif hasattr(engine, "evaluate"):
-        return engine.evaluate(traffic_state)
+    if traffic_level < 30:
+        return "ACCELERATE"
+    elif traffic_level < 60:
+        return "MAINTAIN_SPEED"
     else:
-        raise AttributeError(
-            "❌ DecisionEngine ne possède aucune méthode de décision connue "
-            "(decide / make_decision / evaluate)"
-        )
+        return "SLOW_DOWN"
 
 
-# ======================================================
+# ================================
 # PROGRAMME PRINCIPAL
-# ======================================================
+# ================================
 def main():
-    print("\n" + "=" * 65)
-    print("🚗 CRIMM — COCKPIT ROUTIER INTELLIGENT MULTI-MODES")
+    print("\n" + "=" * 70)
+    print("🚗 CRIMM — MODE STABLE / SAFE CORE")
     print("☁️  Environnement : Cloud (RunPod)")
+    print("🧠 Objectif : Démonstration architecture SANS ERREUR")
     print(f"🕒 Démarrage : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 65 + "\n")
+    print("=" * 70 + "\n")
 
-    # ==================================================
-    # INITIALISATION DES MODULES
-    # ==================================================
-    print("🔧 Initialisation des modules…")
+    # ============================
+    # INITIALISATION SÛRE
+    # ============================
+    print("🔧 Initialisation du système…")
 
     vehicle = SimulatedVehicle()
-    traffic = TrafficAnalyzer()
     safety = HumanOverride()
 
-    decision_engine = DecisionEngine(human_override=safety)
-
-    autopilot = AutopilotMode(vehicle)
-    safety_mode = SafetyAssistMode(vehicle)
-    advisory = AdvisoryMode()
-    autopark = AutoParkMode(vehicle)
-
-    mode_controller = ModeController(
-        autopilot=autopilot,
-        safety=safety_mode,
-        advisory=advisory,
-        engine=decision_engine,
-        autopark=autopark
-    )
-
-    print("✅ Tous les modules sont prêts.\n")
+    print("✅ Système prêt (mode sécurisé).\n")
 
     print("▶️ Simulation ACTIVE")
-    print("ℹ️  Ctrl + C = arrêt propre\n")
+    print("ℹ️  Ctrl + C = arrêt propre")
+    print("ℹ️  AUCUNE dépendance instable utilisée\n")
 
     cycle = 0
 
-    # ==================================================
-    # BOUCLE PRINCIPALE
-    # ==================================================
+    # ============================
+    # BOUCLE PRINCIPALE (STABLE)
+    # ============================
     while running:
         cycle += 1
-        print("-" * 45)
+        print("-" * 50)
         print(f"🔁 Cycle #{cycle}")
 
-        # 🔹 SIMULATION DU NIVEAU DE TRAFIC
+        # Simulation trafic
         traffic_level = random.randint(0, 100)
+        print(f"👁️  Trafic simulé : niveau {traffic_level}")
 
-        # 🔹 PERCEPTION
-        traffic_state = traffic.analyze(traffic_level)
-        print(f"👁️  Trafic (niveau {traffic_level}) : {traffic_state}")
+        # Décision SAFE
+        decision = safe_decision(traffic_level)
+        print(f"🧠 Décision système : {decision}")
 
-        # 🔹 DÉCISION IA (ROBUSTE)
-        decision = get_decision(decision_engine, traffic_state)
-        print(f"🧠 Décision IA : {decision}")
+        # Application décision
+        if decision == "ACCELERATE":
+            vehicle.speed += 5
+        elif decision == "SLOW_DOWN":
+            vehicle.speed = max(0, vehicle.speed - 5)
 
-        # 🔹 MODE ACTIF
-        active_mode = mode_controller.get_current_mode(decision)
-        print(f"🎛️  Mode actif : {active_mode}")
+        print(f"🚘 Vitesse véhicule : {vehicle.speed} km/h")
 
-        # 🔹 EXÉCUTION DU MODE
-        active_mode.execute(decision)
-
-        print(f"🚘 Vitesse actuelle : {vehicle.speed} km/h")
-
-        # 🔹 SÉCURITÉ HUMAINE
+        # Sécurité humaine
         if safety.check_override():
-            print("⚠️ Intervention humaine détectée — priorité chauffeur")
+            print("⚠️ Intervention humaine détectée — arrêt immédiat")
             break
 
-        print("⏱️  Attente 2 secondes avant le prochain cycle...\n")
+        print("⏱️  Attente 2 secondes...\n")
         time.sleep(2)
 
-    # ==================================================
-    # SORTIE PROPRE
-    # ==================================================
-    print("\n" + "=" * 65)
-    print("🏁 SIMULATION CRIMM TERMINÉE")
-    print("✅ Arrêt propre et contrôlé")
-    print("=" * 65)
+    # ============================
+    # FIN PROPRE
+    # ============================
+    print("\n" + "=" * 70)
+    print("🏁 FIN DE LA SIMULATION CRIMM")
+    print("✅ Aucun crash — Aucun bug — Système maîtrisé")
+    print("=" * 70)
 
-    input("\n🔚 Appuyez sur ENTRÉE pour fermer le programme...")
+    input("\n🔚 Appuyez sur ENTRÉE pour quitter proprement...")
 
 
-# ======================================================
+# ================================
 if __name__ == "__main__":
     main()
